@@ -81,6 +81,54 @@ export function generateFxTextures(scene: Phaser.Scene): void {
     g.destroy();
   }
 
+  // 5-point star (white + outline; tint gold for earned, gray for empty)
+  {
+    const g = gfx();
+    const cx = 26;
+    const cy = 26;
+    const spikes = 5;
+    const outer = 22;
+    const inner = 9.5;
+    const pts: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < spikes * 2; i++) {
+      const r = i % 2 === 0 ? outer : inner;
+      const a = (Math.PI / spikes) * i - Math.PI / 2;
+      pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+    }
+    g.fillStyle(0xffffff, 1);
+    g.beginPath();
+    g.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(3.5, 0x4a2c20, 1);
+    g.strokePath();
+    g.generateTexture('ui_star', 52, 52);
+    g.destroy();
+  }
+
+  // round chip (pause button base / level node)
+  {
+    const g = gfx();
+    g.fillStyle(0xfff7ef, 0.95);
+    g.fillCircle(30, 30, 26);
+    g.lineStyle(4.5, 0x4a2c20, 1);
+    g.strokeCircle(30, 30, 26);
+    g.generateTexture('ui_round', 60, 60);
+    g.destroy();
+  }
+
+  // rounded square node (level select)
+  {
+    const g = gfx();
+    g.fillStyle(0xfff7ef, 0.96);
+    g.fillRoundedRect(3, 3, 90, 90, 24);
+    g.lineStyle(5, 0x4a2c20, 1);
+    g.strokeRoundedRect(3, 3, 90, 90, 24);
+    g.generateTexture('ui_node', 96, 96);
+    g.destroy();
+  }
+
   // rounded button (cream + dark outline), tint for variants
   {
     const g = gfx();

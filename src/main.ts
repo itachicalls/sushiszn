@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 import { BootScene } from './game/scenes/BootScene';
+import { HowToScene } from './game/scenes/HowToScene';
+import { LevelSelectScene } from './game/scenes/LevelSelectScene';
+import { PauseScene } from './game/scenes/PauseScene';
 import { PlayScene } from './game/scenes/PlayScene';
 import { ResultScene } from './game/scenes/ResultScene';
+import { ShopScene } from './game/scenes/ShopScene';
 import { TitleScene } from './game/scenes/TitleScene';
 import './styles/global.css';
 
@@ -30,7 +34,16 @@ const game = new Phaser.Game({
       debug: false,
     },
   },
-  scene: [BootScene, TitleScene, PlayScene, ResultScene],
+  scene: [
+    BootScene,
+    TitleScene,
+    LevelSelectScene,
+    HowToScene,
+    ShopScene,
+    PlayScene,
+    PauseScene,
+    ResultScene,
+  ],
   input: {
     activePointers: 3,
   },

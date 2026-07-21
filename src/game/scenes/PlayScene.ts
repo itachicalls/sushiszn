@@ -1,13 +1,17 @@
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
-import { addSoundToggle, addText, coverBackground, DESIGN_HEIGHT, metrics } from '../config/layout';
+import { coinsForRun, getLevel, starsForScore, type LevelConfig } from '../config/levels';
+import { addText, coverBackground, DESIGN_HEIGHT, metrics } from '../config/layout';
+import { save } from '../config/save';
+import { HAZARDS, WASABI_BOMB } from '../config/sushiTypes';
+import { applyUpgrades, type AppliedUpgrades } from '../config/upgrades';
 import { Chopsticks } from '../entities/Chopsticks';
 import { SushiPiece } from '../entities/Sushi';
 import { audio } from '../systems/AudioSystem';
 import { ComboSystem } from '../systems/ComboSystem';
 import { FeverSystem } from '../systems/FeverSystem';
 import { ScoreSystem } from '../systems/ScoreSystem';
-import { Spawner } from '../systems/Spawner';
+import { defaultSpawnConfig, Spawner, type SpawnConfig } from '../systems/Spawner';
 
 interface TrailPoint {
   x: number;
@@ -15,8 +19,19 @@ interface TrailPoint {
   t: number;
 }
 
+export interface PlayData {
+  levelId?: number;
+}
+
 const INK = '#4a2c20';
 const CREAM = '#fff7ef';
+
+const HAZARD_SHOUTS: Record<string, string> = {
+  wasabi: 'WASABI!!',
+  soysauce: 'SOY SPILL!!',
+  chili: 'TOO SPICY!!',
+  fugu: 'FUGU?!',
+};
 
 export class PlayScene extends Phaser.Scene {
   private sushiGroup!: Phaser.Physics.Arcade.Group;
@@ -26,10 +41,17 @@ export class PlayScene extends Phaser.Scene {
   private comboSys = new ComboSystem();
   private feverSys = new FeverSystem();
 
+  private level: LevelConfig | null = null;
+  private perks!: AppliedUpgrades;
+  private maxHearts: number = BALANCE.hearts;
+  private guardsLeft = 0;
+  private duration: number = BALANCE.shiftSeconds;
+
   private hearts: number = BALANCE.hearts;
   private timeLeft: number = BALANCE.shiftSeconds;
   private grabsTotal = 0;
   private ended = false;
+  private paused = false;
   private swiping = false;
   private trail: TrailPoint[] = [];
 
@@ -37,6 +59,8 @@ export class PlayScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private heartIcons: Phaser.GameObjects.Image[] = [];
+  private starIcons: Phaser.GameObjects.Image[] = [];
+  private starsLit = 0;
   private feverBarFill!: Phaser.GameObjects.Rectangle;
   private feverBarWidth = 144;
   private feverOverlay!: Phaser.GameObjects.Rectangle;
@@ -48,23 +72,36 @@ export class PlayScene extends Phaser.Scene {
     super('Play');
   }
 
+  init(data: PlayData): void {
+    this.level = data?.levelId ? getLevel(data.levelId) : null;
+  }
+
   create(): void {
     const { W, H, cx, s } = metrics(this);
 
+    this.perks = applyUpgrades(save.upgrades);
+    this.maxHearts = BALANCE.hearts + this.perks.extraHearts;
+    this.guardsLeft = this.perks.hazardGuards;
+    this.duration = this.level ? this.level.durationSeconds : BALANCE.shiftSeconds;
+
     this.ended = false;
-    this.hearts = BALANCE.hearts;
-    this.timeLeft = BALANCE.shiftSeconds;
+    this.paused = false;
+    this.hearts = this.maxHearts;
+    this.timeLeft = this.duration;
     this.grabsTotal = 0;
+    this.starsLit = 0;
     this.scoreSys.reset();
     this.comboSys.reset();
     this.feverSys.reset();
+    this.feverSys.grabsToFill = Math.max(6, BALANCE.feverGrabsToFill - this.perks.feverGrabsReduction);
     this.trail = [];
     this.swiping = false;
     this.time.timeScale = 1;
     this.tweens.timeScale = 1;
     this.physics.world.timeScale = 1;
 
-    coverBackground(this);
+    const season = this.level?.season;
+    coverBackground(this, season?.bgKey ?? 'bg');
 
     this.add
       .particles(0, 0, 'fx_petal', {
@@ -77,13 +114,15 @@ export class PlayScene extends Phaser.Scene {
         scale: { min: 0.5 * s, max: 0.9 * s },
         alpha: { start: 0.85, end: 0.3 },
         frequency: Math.max(350, 900 / (W / 390)),
+        tint: season?.petalTint ?? 0xffffff,
       })
       .setDepth(2);
 
-    this.physics.world.gravity.y = BALANCE.gravity * (H / DESIGN_HEIGHT);
+    const gravityFactor = season?.gravityFactor ?? 1;
+    this.physics.world.gravity.y = BALANCE.gravity * gravityFactor * (H / DESIGN_HEIGHT);
 
     this.sushiGroup = this.physics.add.group();
-    this.spawner = new Spawner(this, this.sushiGroup);
+    this.spawner = new Spawner(this, this.sushiGroup, this.buildSpawnConfig());
     this.chopsticks = new Chopsticks(this);
     this.trailGfx = this.add.graphics().setDepth(35);
 
@@ -113,12 +152,26 @@ export class PlayScene extends Phaser.Scene {
     this.buildHud();
     this.bindInput();
 
+    // auto-pause when the app is backgrounded (also keeps audio state sane)
+    const onHidden = () => this.openPause();
+    this.game.events.on(Phaser.Core.Events.HIDDEN, onHidden);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off(Phaser.Core.Events.HIDDEN, onHidden);
+    });
+    this.events.on(Phaser.Scenes.Events.RESUME, () => {
+      this.paused = false;
+      audio.startBgm();
+    });
+
     audio.startBgm();
     this.cameras.main.fadeIn(300, 255, 233, 214);
 
-    const ready = addText(this, cx, H * 0.42, "IT'S SUSHI SEASON!", {
+    const readyMsg = this.level
+      ? `LEVEL ${this.level.id} · ${this.level.season.name.toUpperCase()}`
+      : "IT'S SUSHI SEASON!";
+    const ready = addText(this, cx, H * 0.42, readyMsg, {
       fontFamily: 'Fredoka, Nunito, sans-serif',
-      fontSize: `${Math.round(38 * s)}px`,
+      fontSize: `${Math.round((this.level ? 28 : 38) * s)}px`,
       color: '#ff7a45',
       stroke: CREAM,
       strokeThickness: 10,
@@ -144,17 +197,34 @@ export class PlayScene extends Phaser.Scene {
     });
   }
 
+  private buildSpawnConfig(): SpawnConfig {
+    const cfg = defaultSpawnConfig();
+    if (this.level) {
+      cfg.spawnIntervalStart = this.level.spawnIntervalStart;
+      cfg.spawnIntervalEnd = this.level.spawnIntervalEnd;
+      cfg.hazardChance = this.level.hazardChance;
+      cfg.goldenChance = this.level.goldenChance;
+      cfg.hazards = this.level.season.hazards.map((k) => HAZARDS[k]);
+      cfg.windX = this.level.season.windX;
+      cfg.gravityFactor = this.level.season.gravityFactor;
+    } else {
+      cfg.hazards = [WASABI_BOMB];
+    }
+    cfg.goldenChance += this.perks.extraGoldenChance;
+    return cfg;
+  }
+
   update(_time: number, delta: number): void {
-    if (this.ended) return;
+    if (this.ended || this.paused) return;
 
     this.timeLeft -= delta / 1000;
     if (this.timeLeft <= 0) {
       this.timeLeft = 0;
-      this.endRound('what a delicious season!');
+      this.endRound('what a delicious season!', true);
       return;
     }
 
-    const progress = 1 - this.timeLeft / BALANCE.shiftSeconds;
+    const progress = 1 - this.timeLeft / this.duration;
     this.spawner.update(delta, progress);
     this.comboSys.tick(this.time.now);
     if (this.feverSys.tick(delta)) this.endFever();
@@ -163,19 +233,28 @@ export class PlayScene extends Phaser.Scene {
     this.drawTrail();
   }
 
+  // ---------- pause ----------
+
+  private openPause(): void {
+    if (this.ended || this.paused || !this.scene.isActive()) return;
+    this.paused = true;
+    this.endSwipe();
+    audio.stopBgm();
+    this.scene.launch('Pause', { levelId: this.level?.id });
+    this.scene.pause();
+  }
+
   // ---------- HUD ----------
 
   private buildHud(): void {
     const { W, cx, s } = metrics(this);
     const topY = 34 * s;
 
-    // top row: score pill | centered sound toggle | timer pill.
-    // Pills shrink on narrow screens so nothing ever overlaps the toggle.
-    const toggleScale = 0.78 * s;
-    const toggleHalf = (128 * toggleScale) / 2;
+    // top row: score pill | centered pause button | timer pill
+    const pauseR = 24 * s;
     const edge = 14 * s;
     const gap = 10 * s;
-    const sideMax = cx - toggleHalf - edge - gap;
+    const sideMax = cx - pauseR - edge - gap;
     const scoreW = Math.min(150 * s, sideMax);
     const timerW = Math.min(96 * s, sideMax);
     const fontPx = Math.round(Math.min(26 * s, scoreW * 0.3));
@@ -196,7 +275,7 @@ export class PlayScene extends Phaser.Scene {
       .image(W - edge - timerW / 2, topY, 'ui_pill')
       .setDepth(50)
       .setDisplaySize(timerW, 46 * s);
-    this.timerText = addText(this, W - edge - timerW / 2, topY - 1, `${BALANCE.shiftSeconds}`, {
+    this.timerText = addText(this, W - edge - timerW / 2, topY - 1, `${this.duration}`, {
       fontFamily: 'Fredoka, Nunito, sans-serif',
       fontSize: `${fontPx}px`,
       color: INK,
@@ -204,8 +283,39 @@ export class PlayScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(51);
 
+    // kawaii round pause button, top center
+    const pauseBtn = this.add.container(cx, topY).setDepth(60);
+    const pauseBg = this.add.image(0, 0, 'ui_round').setDisplaySize(pauseR * 2, pauseR * 2);
+    const barW = 5 * s;
+    const barH = 16 * s;
+    const bar1 = this.add.rectangle(-5 * s, 0, barW, barH, 0xff5e6c).setOrigin(0.5);
+    const bar2 = this.add.rectangle(5 * s, 0, barW, barH, 0xff5e6c).setOrigin(0.5);
+    pauseBtn.add([pauseBg, bar1, bar2]);
+    pauseBg
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => pauseBtn.setScale(1.08))
+      .on('pointerout', () => pauseBtn.setScale(1))
+      .on('pointerdown', () => {
+        audio.ui();
+        this.openPause();
+      });
+
+    // star progress (level mode): under the pause button
+    this.starIcons = [];
+    if (this.level) {
+      const starSize = 20 * s;
+      for (let i = 0; i < 3; i++) {
+        const star = this.add
+          .image(cx + (i - 1) * (starSize + 6 * s), topY + 34 * s, 'ui_star')
+          .setDepth(51)
+          .setTint(0xd8cabf);
+        star.setDisplaySize(starSize, starSize);
+        this.starIcons.push(star);
+      }
+    }
+
     this.heartIcons = [];
-    for (let i = 0; i < BALANCE.hearts; i++) {
+    for (let i = 0; i < this.maxHearts; i++) {
       const heart = this.add.image(28 * s + i * 34 * s, 78 * s, 'heart').setDepth(50);
       heart.setDisplaySize(28 * s, 28 * s * (heart.height / heart.width));
       this.heartIcons.push(heart);
@@ -239,8 +349,6 @@ export class PlayScene extends Phaser.Scene {
     })
       .setOrigin(0.5)
       .setDepth(52);
-
-    addSoundToggle(this, cx, topY, toggleScale, () => audio.isMuted(), () => audio.toggleMute());
   }
 
   private refreshHud(): void {
@@ -250,6 +358,23 @@ export class PlayScene extends Phaser.Scene {
     this.heartIcons.forEach((h, i) => h.setAlpha(i < this.hearts ? 1 : 0.2));
     this.feverBarFill.width = this.feverBarWidth * this.feverSys.charge;
     this.feverBarFill.setFillStyle(this.feverSys.active ? 0xff5e6c : 0xffb02e);
+
+    if (this.level) {
+      const stars = starsForScore(this.level, this.scoreSys.score);
+      while (this.starsLit < stars) {
+        const icon = this.starIcons[this.starsLit];
+        icon.setTint(0xffc93c);
+        this.tweens.add({
+          targets: icon,
+          scale: icon.scale * 1.6,
+          angle: 360,
+          duration: 380,
+          yoyo: true,
+          ease: 'Back.easeOut',
+        });
+        this.starsLit += 1;
+      }
+    }
 
     const combo = this.comboSys.combo;
     if (combo >= 2) {
@@ -287,6 +412,9 @@ export class PlayScene extends Phaser.Scene {
 
     this.input.on('pointerup', () => this.endSwipe());
     this.input.on('pointerupoutside', () => this.endSwipe());
+
+    this.input.keyboard?.on('keydown-ESC', () => this.openPause());
+    this.input.keyboard?.on('keydown-P', () => this.openPause());
   }
 
   private endSwipe(): void {
@@ -322,7 +450,8 @@ export class PlayScene extends Phaser.Scene {
 
     for (const piece of this.sushiGroup.getChildren() as SushiPiece[]) {
       if (!piece.active || piece.grabbed) continue;
-      if (distanceToSegment(piece.x, piece.y, x1, y1, x2, y2) <= piece.getHitRadius()) {
+      const radius = piece.getHitRadius() * this.perks.reachMultiplier;
+      if (distanceToSegment(piece.x, piece.y, x1, y1, x2, y2) <= radius) {
         this.resolveGrab(piece);
       }
     }
@@ -336,13 +465,27 @@ export class PlayScene extends Phaser.Scene {
       audio.bomb();
       this.comboSys.breakCombo();
       this.feverSys.punish();
-      this.loseHeart();
-      this.cameras.main.shake(200, 0.014);
+
+      const guarded = this.guardsLeft > 0;
+      if (guarded) {
+        this.guardsLeft -= 1;
+        this.cameras.main.shake(120, 0.007);
+        this.floatText(piece.x, piece.y - 24, 'guarded! ✧', '#5a7bd6', 26);
+      } else {
+        this.loseHeart();
+        this.cameras.main.shake(200, 0.014);
+        this.floatText(
+          piece.x,
+          piece.y,
+          HAZARD_SHOUTS[piece.def.kind] ?? 'OUCH!!',
+          '#5aa832',
+          30,
+        );
+      }
       this.hitStop(140);
       piece.setTint(0x9dff5e);
       this.sparkles.emitParticleAt(piece.x, piece.y, 8);
       piece.playCatchJuice();
-      this.floatText(piece.x, piece.y, 'WASABI!!', '#5aa832', 30);
       return;
     }
 
@@ -482,7 +625,7 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.flash(130, 255, 120, 120);
     if (this.hearts <= 0) {
       this.hearts = 0;
-      this.endRound('sushi season is over...');
+      this.endRound('sushi season is over...', false);
     }
   }
 
@@ -510,19 +653,37 @@ export class PlayScene extends Phaser.Scene {
     });
   }
 
-  private endRound(reason: string): void {
+  private endRound(reason: string, survived: boolean): void {
     if (this.ended) return;
     this.ended = true;
     this.spawner.stop();
     this.endSwipe();
     this.endFever();
 
+    const score = this.scoreSys.score;
+    let stars = 0;
+    let coins = 0;
+    if (this.level) {
+      stars = survived ? starsForScore(this.level, score) : 0;
+      const firstClear = save.starsFor(this.level.id) < 2;
+      coins = coinsForRun(score, stars, firstClear);
+      save.recordStars(this.level.id, stars);
+      save.addCoins(coins);
+    } else {
+      coins = coinsForRun(score, 0, false);
+      save.addCoins(coins);
+      save.recordScore(score);
+    }
+
     this.time.delayedCall(500, () => {
       this.scene.start('Result', {
-        score: this.scoreSys.score,
+        score,
         bestCombo: this.scoreSys.bestCombo,
         grabs: this.grabsTotal,
         reason,
+        levelId: this.level?.id,
+        stars,
+        coins,
       });
     });
   }

@@ -1,11 +1,33 @@
+import { save } from '../config/save';
+
 /** Procedural SFX + a cozy pentatonic BGM loop via Web Audio — zero asset files. */
 export class AudioSystem {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  private muted = false;
+  private muted = save.muted;
   private bgmTimer: number | null = null;
   private bgmStep = 0;
+
+  constructor() {
+    // Mobile browsers suspend the AudioContext when the app is backgrounded
+    // and won't always resume it automatically — resume on every return path.
+    const resume = () => this.resumeIfSuspended();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) resume();
+    });
+    window.addEventListener('focus', resume);
+    window.addEventListener('pageshow', resume);
+    // iOS also requires a user gesture after interruption (call, Siri, etc.)
+    window.addEventListener('touchend', resume, { passive: true });
+    window.addEventListener('pointerdown', resume, { passive: true });
+  }
+
+  private resumeIfSuspended(): void {
+    if (this.ctx && this.ctx.state !== 'running') {
+      void this.ctx.resume();
+    }
+  }
 
   unlock(): void {
     const ctx = this.ensureCtx();
@@ -35,6 +57,7 @@ export class AudioSystem {
 
   toggleMute(): boolean {
     this.muted = !this.muted;
+    save.setMuted(this.muted);
     if (this.master && this.ctx) {
       this.master.gain.setTargetAtTime(this.muted ? 0 : 1, this.ctx.currentTime, 0.02);
     }

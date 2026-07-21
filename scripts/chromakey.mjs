@@ -25,8 +25,13 @@ const jobs = [
   ['sprite_golden.png', `${OUT}/golden.png`, 'green', 320],
   ['sprite_wasabi.png', `${OUT}/wasabi.png`, 'magenta', 320],
   ['sprite_chopsticks.png', `${OUT_UI}/chopsticks.png`, 'green', 420],
+  ['sprite_soysauce.png', `${OUT}/soysauce.png`, 'green', 320],
+  ['sprite_chili.png', `${OUT}/chili.png`, 'green', 320],
+  ['sprite_fugu.png', `${OUT}/fugu.png`, 'green', 320],
+  ['sprite_sensei.png', `${OUT_UI}/sensei.png`, 'green', 360],
   ['logo_sushiszn.png', `${OUT_UI}/logo.png`, 'green', 640],
   ['ui_heart.png', `${OUT_UI}/heart.png`, 'green', 180],
+  ['ui_coin.png', `${OUT_UI}/coin.png`, 'magenta', 160],
 ];
 
 function keyDistance(r, g, b, key) {
@@ -92,9 +97,17 @@ for (const [src, out, key, size] of jobs) {
   await processOne(src, out, key, size);
 }
 
-// background: just copy + resize, no keying
-await sharp(path.join(SRC, 'bg_kitchen.png'))
-  .resize(780, 1560, { fit: 'cover' })
-  .png({ quality: 90 })
-  .toFile(`${OUT_UI}/bg.png`);
-console.log('ok bg');
+// backgrounds: just copy + resize, no keying
+const bgs = [
+  ['bg_kitchen.png', 'bg.png'],
+  ['bg_summer.png', 'bg_summer.png'],
+  ['bg_autumn.png', 'bg_autumn.png'],
+  ['bg_winter.png', 'bg_winter.png'],
+];
+for (const [src, out] of bgs) {
+  await sharp(path.join(SRC, src))
+    .resize(780, 1560, { fit: 'cover' })
+    .png({ quality: 90 })
+    .toFile(`${OUT_UI}/${out}`);
+  console.log(`ok ${out}`);
+}

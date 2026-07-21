@@ -89,6 +89,67 @@ export function addSoundToggle(
   return c;
 }
 
+/** Kawaii rounded button shared across scenes. Returns the container. */
+export function addButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  label: string,
+  tint: number,
+  scale: number,
+  onClick: () => void,
+  textColor = '#fff7ef',
+): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y).setDepth(12).setScale(scale);
+  const bg = scene.add.image(0, 0, 'ui_btn').setTint(tint);
+  const t = addText(scene, 0, -1, label, {
+    fontFamily: 'Fredoka, Nunito, sans-serif',
+    fontSize: '28px',
+    color: textColor,
+    stroke: textColor === '#fff7ef' ? '#4a2c20' : '#fff7ef',
+    strokeThickness: 5,
+  }).setOrigin(0.5);
+  c.add([bg, t]);
+  bg.setInteractive({ useHandCursor: true })
+    .on('pointerover', () => c.setScale(scale * 1.05))
+    .on('pointerout', () => c.setScale(scale))
+    .on('pointerdown', () => {
+      scene.tweens.add({
+        targets: c,
+        scaleX: scale * 1.1,
+        scaleY: scale * 0.9,
+        duration: 80,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+      });
+      onClick();
+    });
+  return c;
+}
+
+/** Coin count pill (icon + amount). Call `refresh` after coin changes. */
+export function addCoinPill(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  s: number,
+  getCoins: () => number,
+): { container: Phaser.GameObjects.Container; refresh: () => void } {
+  const c = scene.add.container(x, y).setDepth(60);
+  const bg = scene.add.image(0, 0, 'ui_pill').setDisplaySize(110 * s, 40 * s);
+  const icon = scene.add.image(-34 * s, 0, 'coin');
+  icon.setDisplaySize(26 * s, 26 * s);
+  const label = addText(scene, 10 * s, -1, '', {
+    fontFamily: 'Fredoka, Nunito, sans-serif',
+    fontSize: `${Math.round(17 * s)}px`,
+    color: '#4a2c20',
+  }).setOrigin(0.5);
+  const refresh = () => label.setText(String(getCoins()));
+  refresh();
+  c.add([bg, icon, label]);
+  return { container: c, refresh };
+}
+
 /** Debounced scene restart on viewport resize (for static screens). */
 export function restartOnResize(scene: Phaser.Scene): void {
   let timer: number | null = null;

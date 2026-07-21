@@ -4,6 +4,8 @@ export class FeverSystem {
   /** 0..1 meter */
   charge = 0;
   active = false;
+  /** grabs needed to fill the meter (reduced by shop upgrade) */
+  grabsToFill: number = BALANCE.feverGrabsToFill;
   private remainingMs = 0;
 
   reset(): void {
@@ -15,7 +17,7 @@ export class FeverSystem {
   /** returns true when fever just triggered */
   addGrab(): boolean {
     if (this.active) return false;
-    this.charge = Math.min(1, this.charge + 1 / BALANCE.feverGrabsToFill);
+    this.charge = Math.min(1, this.charge + 1 / this.grabsToFill);
     if (this.charge >= 1) {
       this.active = true;
       this.remainingMs = BALANCE.feverDurationMs;

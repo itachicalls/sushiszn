@@ -3,6 +3,7 @@ import { BALANCE } from '../config/balance';
 import { DESIGN_HEIGHT, metrics } from '../config/layout';
 import {
   GOLDEN_SUSHI,
+  HAZARDS,
   NORMAL_KINDS,
   SUSHI_TYPES,
   WASABI_BOMB,
@@ -12,18 +13,45 @@ import { SushiPiece } from '../entities/Sushi';
 
 type Pattern = 'single' | 'fan' | 'volley' | 'crossfire';
 
+export interface SpawnConfig {
+  spawnIntervalStart: number;
+  spawnIntervalEnd: number;
+  hazardChance: number;
+  hazardWarmupSeconds: number;
+  goldenChance: number;
+  hazards: SushiDef[];
+  /** seasonal horizontal wind, design px/s (gusts in either direction) */
+  windX: number;
+  gravityFactor: number;
+}
+
+export function defaultSpawnConfig(): SpawnConfig {
+  return {
+    spawnIntervalStart: BALANCE.spawnIntervalStart,
+    spawnIntervalEnd: BALANCE.spawnIntervalEnd,
+    hazardChance: BALANCE.wasabiChanceAfterWarmup,
+    hazardWarmupSeconds: BALANCE.wasabiWarmupSeconds,
+    goldenChance: BALANCE.goldenChance,
+    hazards: [WASABI_BOMB, HAZARDS.soysauce],
+    windX: 0,
+    gravityFactor: 1,
+  };
+}
+
 /** Wave-based spawner with readable throw patterns instead of pure randomness. */
 export class Spawner {
   private scene: Phaser.Scene;
   private group: Phaser.Physics.Arcade.Group;
+  private cfg: SpawnConfig;
   private elapsed = 0;
   private nextSpawnAt = 500;
   private active = true;
   feverMode = false;
 
-  constructor(scene: Phaser.Scene, group: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, group: Phaser.Physics.Arcade.Group, cfg: SpawnConfig) {
     this.scene = scene;
     this.group = group;
+    this.cfg = cfg;
   }
 
   stop(): void {
@@ -36,8 +64,8 @@ export class Spawner {
     if (this.elapsed < this.nextSpawnAt) return;
 
     let interval =
-      BALANCE.spawnIntervalStart -
-      (BALANCE.spawnIntervalStart - BALANCE.spawnIntervalEnd) * shiftProgress;
+      this.cfg.spawnIntervalStart -
+      (this.cfg.spawnIntervalStart - this.cfg.spawnIntervalEnd) * shiftProgress;
     if (this.feverMode) interval *= BALANCE.feverSpawnFactor;
     // wider screens get denser waves so the field never feels empty
     const { W, s } = metrics(this.scene);
@@ -95,13 +123,13 @@ export class Spawner {
     const seconds = this.elapsed / 1000;
     if (
       !this.feverMode &&
-      seconds > BALANCE.wasabiWarmupSeconds &&
-      Math.random() < BALANCE.wasabiChanceAfterWarmup + progress * 0.05
+      seconds > this.cfg.hazardWarmupSeconds &&
+      Math.random() < this.cfg.hazardChance + progress * 0.05
     ) {
-      return WASABI_BOMB;
+      return Phaser.Utils.Array.GetRandom(this.cfg.hazards);
     }
     if (this.feverMode && Math.random() < 0.25) return GOLDEN_SUSHI;
-    if (Math.random() < BALANCE.goldenChance + progress * 0.03) return GOLDEN_SUSHI;
+    if (Math.random() < this.cfg.goldenChance + progress * 0.03) return GOLDEN_SUSHI;
     return SUSHI_TYPES[Phaser.Utils.Array.GetRandom(NORMAL_KINDS)];
   }
 
@@ -119,15 +147,16 @@ export class Spawner {
       this.group.add(piece);
 
       // launch velocity chosen so the arc peaks at 55–85% of screen height
-      const gravity = BALANCE.gravity * (H / DESIGN_HEIGHT);
+      const gravity = BALANCE.gravity * this.cfg.gravityFactor * (H / DESIGN_HEIGHT);
       const peak = H * Phaser.Math.FloatBetween(0.55, 0.85) + 60 * s;
       const boost = 1 + progress * 0.12;
       const vy = -Math.sqrt(2 * gravity * peak) * boost;
       const centerPull = (W / 2 - x) * 0.55;
+      const gust = this.cfg.windX > 0 ? Phaser.Math.Between(-this.cfg.windX, this.cfg.windX) * s : 0;
       const vx = Phaser.Math.Clamp(
-        centerPull + vxBias + Phaser.Math.Between(-60, 60) * s,
-        -240 * s,
-        240 * s,
+        centerPull + vxBias + gust + Phaser.Math.Between(-60, 60) * s,
+        -280 * s,
+        280 * s,
       );
       piece.launch(vx, vy);
     });

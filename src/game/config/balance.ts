@@ -17,7 +17,5 @@ export const BALANCE = {
   feverScoreMultiplier: 2,
 } as const;
 
-export const STORAGE_HIGH_SCORE = 'sushi-szn-highscore';
-
 export const COIN_CA = '0x98d94d8e9711abc3975878efcb1c1b2ff8e244bc';
 export const COIN_PLATFORM = 'sushiswap';

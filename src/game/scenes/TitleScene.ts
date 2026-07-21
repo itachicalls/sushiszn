@@ -1,6 +1,14 @@
 import Phaser from 'phaser';
-import { COIN_CA, COIN_PLATFORM, STORAGE_HIGH_SCORE } from '../config/balance';
-import { addSoundToggle, addText, coverBackground, metrics, restartOnResize } from '../config/layout';
+import { COIN_CA, COIN_PLATFORM } from '../config/balance';
+import {
+  addSoundToggle,
+  addText,
+  coverBackground,
+  metrics,
+  restartOnResize,
+} from '../config/layout';
+import { TOTAL_LEVELS } from '../config/levels';
+import { save } from '../config/save';
 import { audio } from '../systems/AudioSystem';
 
 const CAST = ['salmon', 'tuna', 'tamago', 'onigiri', 'maki', 'golden'];
@@ -43,8 +51,8 @@ export class TitleScene extends Phaser.Scene {
     }
 
     // logo
-    const logo = this.add.image(cx, H * 0.22, 'logo').setDepth(10).setScale(0);
-    const logoScale = Math.min((W * 0.86) / logo.width, (H * 0.3) / logo.height);
+    const logo = this.add.image(cx, H * 0.2, 'logo').setDepth(10).setScale(0);
+    const logoScale = Math.min((W * 0.86) / logo.width, (H * 0.28) / logo.height);
     this.tweens.add({ targets: logo, scale: logoScale, duration: 550, ease: 'Back.easeOut' });
     this.tweens.add({
       targets: logo,
@@ -57,7 +65,7 @@ export class TitleScene extends Phaser.Scene {
       delay: 550,
     });
 
-    addText(this, cx, H * 0.37, "it's sushi season ~", {
+    addText(this, cx, H * 0.335, "it's sushi season ~", {
       fontFamily: 'Nunito, sans-serif',
       fontSize: `${Math.round(20 * s)}px`,
       color: '#8a5a48',
@@ -68,14 +76,12 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(10);
 
     // hero mascot: salmon + chopsticks duo
-    const mascot = this.add
-      .image(cx - 30 * s, H * 0.52, 'salmon')
-      .setDepth(10);
-    mascot.setDisplaySize(190 * s, 190 * s * (mascot.height / mascot.width));
+    const mascot = this.add.image(cx - 30 * s, H * 0.465, 'salmon').setDepth(10);
+    mascot.setDisplaySize(165 * s, 165 * s * (mascot.height / mascot.width));
     const sticks = this.add
-      .image(cx + 92 * s, H * 0.505, 'chopsticks')
+      .image(cx + 84 * s, H * 0.455, 'chopsticks')
       .setDepth(10)
-      .setScale(0.34 * s)
+      .setScale(0.3 * s)
       .setAngle(12);
     this.tweens.add({
       targets: mascot,
@@ -97,9 +103,9 @@ export class TitleScene extends Phaser.Scene {
     });
 
     this.add
-      .particles(cx, H * 0.52, 'fx_sparkle', {
+      .particles(cx, H * 0.465, 'fx_sparkle', {
         x: { min: -120 * s, max: 120 * s },
-        y: { min: -90 * s, max: 90 * s },
+        y: { min: -80 * s, max: 80 * s },
         lifespan: 900,
         scale: { start: 0.9 * s, end: 0 },
         alpha: { start: 1, end: 0 },
@@ -107,28 +113,31 @@ export class TitleScene extends Phaser.Scene {
       })
       .setDepth(11);
 
-    const high = Number(localStorage.getItem(STORAGE_HIGH_SCORE) ?? '0');
-    addText(
-      this,
-      cx,
-      H * 0.635,
-      high > 0
-        ? `best score  ${high}`
-        : 'swipe to catch flying sushi!\nwatch out for angry wasabi...',
-      {
-        fontFamily: 'Nunito, sans-serif',
-        fontSize: `${Math.round(15 * s)}px`,
-        color: '#8a5a48',
-        align: 'center',
-        stroke: '#fff7ef',
-        strokeThickness: 5,
-      },
-    )
-      .setOrigin(0.5)
-      .setDepth(10);
+    // progress row: stars + coins
+    const totalStars = save.totalStars();
+    const progress = this.add.container(cx, H * 0.585).setDepth(10);
+    const starIcon = this.add.image(-74 * s, 0, 'ui_star').setTint(0xffc93c);
+    starIcon.setDisplaySize(24 * s, 24 * s);
+    const starText = addText(this, -38 * s, 0, `${totalStars}/${TOTAL_LEVELS * 3}`, {
+      fontFamily: 'Fredoka, Nunito, sans-serif',
+      fontSize: `${Math.round(16 * s)}px`,
+      color: INK,
+      stroke: '#fff7ef',
+      strokeThickness: 4,
+    }).setOrigin(0.5);
+    const coinIcon = this.add.image(30 * s, 0, 'coin');
+    coinIcon.setDisplaySize(24 * s, 24 * s);
+    const coinText = addText(this, 66 * s, 0, String(save.coins), {
+      fontFamily: 'Fredoka, Nunito, sans-serif',
+      fontSize: `${Math.round(16 * s)}px`,
+      color: INK,
+      stroke: '#fff7ef',
+      strokeThickness: 4,
+    }).setOrigin(0.5);
+    progress.add([starIcon, starText, coinIcon, coinText]);
 
-    // play button
-    const btn = this.add.container(cx, H * 0.735).setDepth(12).setScale(s);
+    // play button -> level map
+    const btn = this.add.container(cx, H * 0.665).setDepth(12).setScale(s);
     const btnBg = this.add.image(0, 0, 'ui_btn').setTint(0xff7a45);
     const btnLabel = addText(this, 0, -1, 'PLAY', {
       fontFamily: 'Fredoka, Nunito, sans-serif',
@@ -146,7 +155,7 @@ export class TitleScene extends Phaser.Scene {
         audio.unlock();
         audio.ui();
         this.cameras.main.fadeOut(220, 255, 233, 214);
-        this.time.delayedCall(230, () => this.scene.start('Play'));
+        this.time.delayedCall(230, () => this.scene.start('LevelSelect'));
       });
     this.tweens.add({
       targets: btn,
@@ -157,19 +166,108 @@ export class TitleScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    // memecoin plaque: CA + platform
-    this.buildCoinPlaque(cx, H * 0.845, s);
+    // sliding nav bar: how to play (sensei), shop, endless run
+    this.buildNavBar(cx, H * 0.765, s);
 
-    addSoundToggle(this, cx, H * 0.94, s, () => audio.isMuted(), () => {
+    // memecoin plaque: CA + platform
+    this.buildCoinPlaque(cx, H * 0.87, s);
+
+    addSoundToggle(this, cx, H * 0.945, s, () => audio.isMuted(), () => {
       audio.toggleMute();
       if (!audio.isMuted()) audio.ui();
     });
   }
 
+  private buildNavBar(x: number, y: number, s: number): void {
+    const { W } = metrics(this);
+    const nav = this.add.container(x, y + 90 * s).setDepth(12).setAlpha(0);
+    const w = Math.min(352 * s, W - 20 * s);
+    const h = 66 * s;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff7ef, 0.94);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 24 * s);
+    bg.lineStyle(4 * s, 0x4a2c20, 1);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 24 * s);
+    nav.add(bg);
+
+    const items: Array<{ icon: string; label: string; onTap: () => void; tint?: number }> = [
+      {
+        icon: 'sensei',
+        label: 'how to',
+        onTap: () => this.go('HowTo'),
+      },
+      {
+        icon: 'coin',
+        label: 'shop',
+        onTap: () => this.go('Shop'),
+      },
+      {
+        icon: 'golden',
+        label: 'endless',
+        onTap: () => this.go('Play'),
+      },
+    ];
+
+    const slot = w / items.length;
+    items.forEach((item, i) => {
+      const ix = -w / 2 + slot * i + slot / 2;
+      const cell = this.add.container(ix, 0);
+      const icon = this.add.image(-slot / 2 + 26 * s, 0, item.icon);
+      const iconSize = 36 * s;
+      icon.setScale(Math.min(iconSize / icon.width, iconSize / icon.height));
+      const label = addText(this, 20 * s, 0, item.label, {
+        fontFamily: 'Fredoka, Nunito, sans-serif',
+        fontSize: `${Math.round(15 * s)}px`,
+        color: INK,
+      }).setOrigin(0.5);
+      const hit = this.add
+        .rectangle(0, 0, slot - 6 * s, h - 8 * s, 0xffffff, 0.001)
+        .setInteractive({ useHandCursor: true });
+      hit
+        .on('pointerover', () => cell.setScale(1.08))
+        .on('pointerout', () => cell.setScale(1))
+        .on('pointerdown', () => {
+          this.tweens.add({
+            targets: cell,
+            scaleX: 1.15,
+            scaleY: 0.9,
+            duration: 80,
+            yoyo: true,
+          });
+          item.onTap();
+        });
+      cell.add([icon, label, hit]);
+      nav.add(cell);
+
+      if (i < items.length - 1) {
+        const divider = this.add.rectangle(-w / 2 + slot * (i + 1), 0, 2.5 * s, h * 0.5, 0xe8dcd2);
+        nav.add(divider);
+      }
+    });
+
+    // slide in from below shortly after the title appears
+    this.tweens.add({
+      targets: nav,
+      y,
+      alpha: 1,
+      duration: 480,
+      delay: 350,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  private go(scene: string): void {
+    audio.unlock();
+    audio.ui();
+    this.cameras.main.fadeOut(200, 255, 233, 214);
+    this.time.delayedCall(210, () => this.scene.start(scene));
+  }
+
   private buildCoinPlaque(x: number, y: number, s: number): void {
     const plaque = this.add.container(x, y).setDepth(12);
     const w = Math.min(346 * s, this.scale.width - 24);
-    const h = 66 * s;
+    const h = 62 * s;
 
     // soft cream card with pink border + inner blush line
     const bg = this.add.graphics();

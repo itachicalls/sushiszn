@@ -30,9 +30,14 @@ export class BootScene extends Phaser.Scene {
     });
 
     this.load.image('bg', 'assets/ui/bg.png');
+    this.load.image('bg_summer', 'assets/ui/bg_summer.png');
+    this.load.image('bg_autumn', 'assets/ui/bg_autumn.png');
+    this.load.image('bg_winter', 'assets/ui/bg_winter.png');
     this.load.image('logo', 'assets/ui/logo.png');
     this.load.image('chopsticks', 'assets/ui/chopsticks.png');
     this.load.image('heart', 'assets/ui/heart.png');
+    this.load.image('coin', 'assets/ui/coin.png');
+    this.load.image('sensei', 'assets/ui/sensei.png');
     this.load.image('salmon', 'assets/sushi/salmon.png');
     this.load.image('tuna', 'assets/sushi/tuna.png');
     this.load.image('tamago', 'assets/sushi/tamago.png');
@@ -40,6 +45,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image('maki', 'assets/sushi/maki.png');
     this.load.image('golden', 'assets/sushi/golden.png');
     this.load.image('wasabi', 'assets/sushi/wasabi.png');
+    this.load.image('soysauce', 'assets/sushi/soysauce.png');
+    this.load.image('chili', 'assets/sushi/chili.png');
+    this.load.image('fugu', 'assets/sushi/fugu.png');
   }
 
   create(): void {
