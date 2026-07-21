@@ -93,8 +93,8 @@ export function getLevel(id: number): LevelConfig {
   const hazardChance = 0.07 + 0.11 * t; // 7% -> 18%
   const goldenChance = 0.05;
 
-  // Expected achievable score grows with pace; two stars should feel earned.
-  const two = Math.round((1100 + 5200 * Math.pow(t, 1.12)) / 50) * 50;
+  // Expected achievable score grows with pace; early levels stay welcoming.
+  const two = Math.round((750 + 5250 * Math.pow(t, 1.2)) / 50) * 50;
   const one = Math.round((two * 0.55) / 50) * 50;
   const three = Math.round((two * 1.5) / 50) * 50;
 

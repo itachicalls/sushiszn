@@ -220,7 +220,7 @@ export class PlayScene extends Phaser.Scene {
     this.timeLeft -= delta / 1000;
     if (this.timeLeft <= 0) {
       this.timeLeft = 0;
-      this.endRound('what a delicious season!', true);
+      this.endRound('what a delicious season!');
       return;
     }
 
@@ -625,7 +625,7 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.flash(130, 255, 120, 120);
     if (this.hearts <= 0) {
       this.hearts = 0;
-      this.endRound('sushi season is over...', false);
+      this.endRound('sushi season is over...');
     }
   }
 
@@ -653,7 +653,7 @@ export class PlayScene extends Phaser.Scene {
     });
   }
 
-  private endRound(reason: string, survived: boolean): void {
+  private endRound(reason: string): void {
     if (this.ended) return;
     this.ended = true;
     this.spawner.stop();
@@ -664,7 +664,8 @@ export class PlayScene extends Phaser.Scene {
     let stars = 0;
     let coins = 0;
     if (this.level) {
-      stars = survived ? starsForScore(this.level, score) : 0;
+      // stars you scored are stars you keep — even if hearts ran out
+      stars = starsForScore(this.level, score);
       const firstClear = save.starsFor(this.level.id) < 2;
       coins = coinsForRun(score, stars, firstClear);
       save.recordStars(this.level.id, stars);
