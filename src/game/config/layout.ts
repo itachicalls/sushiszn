@@ -24,9 +24,10 @@ export function metrics(scene: Phaser.Scene): Metrics {
   return { W, H, cx: W / 2, cy: H / 2, s };
 }
 
-const TEXT_RESOLUTION = Math.min(window.devicePixelRatio || 1, 2);
+// canvas is already sized at device resolution (see main.ts)
+const TEXT_RESOLUTION = 1;
 
-/** Crisp text helper — always renders at device resolution. */
+/** Crisp text helper. */
 export function addText(
   scene: Phaser.Scene,
   x: number,

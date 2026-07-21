@@ -53,6 +53,6 @@ async function run(label, viewport) {
 }
 
 await run('desktop', { width: 1600, height: 900 });
-await run('mobile', { width: 390, height: 844, isMobile: true, hasTouch: true });
+await run('mobile', { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
 await browser.close();

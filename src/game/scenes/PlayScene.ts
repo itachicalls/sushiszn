@@ -169,22 +169,36 @@ export class PlayScene extends Phaser.Scene {
     const { W, cx, s } = metrics(this);
     const topY = 34 * s;
 
-    this.add.image(24 * s + 75 * s, topY, 'ui_pill').setDepth(50).setDisplaySize(150 * s, 46 * s);
-    this.scoreText = addText(this, 24 * s + 75 * s, topY - 1, '0', {
+    // top row: score pill | centered sound toggle | timer pill.
+    // Pills shrink on narrow screens so nothing ever overlaps the toggle.
+    const toggleScale = 0.78 * s;
+    const toggleHalf = (128 * toggleScale) / 2;
+    const edge = 14 * s;
+    const gap = 10 * s;
+    const sideMax = cx - toggleHalf - edge - gap;
+    const scoreW = Math.min(150 * s, sideMax);
+    const timerW = Math.min(96 * s, sideMax);
+    const fontPx = Math.round(Math.min(26 * s, scoreW * 0.3));
+
+    this.add
+      .image(edge + scoreW / 2, topY, 'ui_pill')
+      .setDepth(50)
+      .setDisplaySize(scoreW, 46 * s);
+    this.scoreText = addText(this, edge + scoreW / 2, topY - 1, '0', {
       fontFamily: 'Fredoka, Nunito, sans-serif',
-      fontSize: `${Math.round(26 * s)}px`,
+      fontSize: `${fontPx}px`,
       color: INK,
     })
       .setOrigin(0.5)
       .setDepth(51);
 
     this.add
-      .image(W - 24 * s - 48 * s, topY, 'ui_pill')
+      .image(W - edge - timerW / 2, topY, 'ui_pill')
       .setDepth(50)
-      .setDisplaySize(96 * s, 46 * s);
-    this.timerText = addText(this, W - 24 * s - 48 * s, topY - 1, `${BALANCE.shiftSeconds}`, {
+      .setDisplaySize(timerW, 46 * s);
+    this.timerText = addText(this, W - edge - timerW / 2, topY - 1, `${BALANCE.shiftSeconds}`, {
       fontFamily: 'Fredoka, Nunito, sans-serif',
-      fontSize: `${Math.round(26 * s)}px`,
+      fontSize: `${fontPx}px`,
       color: INK,
     })
       .setOrigin(0.5)
@@ -226,7 +240,7 @@ export class PlayScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(52);
 
-    addSoundToggle(this, cx, topY, s * 0.82, () => audio.isMuted(), () => audio.toggleMute());
+    addSoundToggle(this, cx, topY, toggleScale, () => audio.isMuted(), () => audio.toggleMute());
   }
 
   private refreshHud(): void {

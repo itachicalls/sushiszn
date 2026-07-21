@@ -10,15 +10,18 @@ if (!parent) {
   throw new Error('Missing #app root');
 }
 
-new Phaser.Game({
+// Render at device resolution (capped at 2x) so text/art stay crisp on phones.
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent,
   backgroundColor: '#ffe3c4',
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    mode: Phaser.Scale.NONE,
+    width: window.innerWidth * DPR,
+    height: window.innerHeight * DPR,
+    zoom: 1 / DPR,
   },
   physics: {
     default: 'arcade',
@@ -35,4 +38,12 @@ new Phaser.Game({
     antialias: true,
     roundPixels: false,
   },
+});
+
+let resizeTimer: number | undefined;
+window.addEventListener('resize', () => {
+  window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(() => {
+    game.scale.resize(window.innerWidth * DPR, window.innerHeight * DPR);
+  }, 100);
 });

@@ -26,7 +26,7 @@ const jobs = [
   ['sprite_wasabi.png', `${OUT}/wasabi.png`, 'magenta', 320],
   ['sprite_chopsticks.png', `${OUT_UI}/chopsticks.png`, 'green', 420],
   ['logo_sushiszn.png', `${OUT_UI}/logo.png`, 'green', 640],
-  ['ui_heart.png', `${OUT_UI}/heart.png`, 'green', 96],
+  ['ui_heart.png', `${OUT_UI}/heart.png`, 'green', 180],
 ];
 
 function keyDistance(r, g, b, key) {
