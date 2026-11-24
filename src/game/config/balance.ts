@@ -17,5 +17,5 @@ export const BALANCE = {
   feverScoreMultiplier: 2,
 } as const;
 
-export const COIN_CA = '0x98d94d8e9711abc3975878efcb1c1b2ff8e244bc';
-export const COIN_PLATFORM = 'sushiswap';
+export const CREATOR_HANDLE = '@IShortBTC';
+export const CREATOR_URL = 'https://x.com/IShortBTC';

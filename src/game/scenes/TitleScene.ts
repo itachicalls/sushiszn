@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COIN_CA, COIN_PLATFORM } from '../config/balance';
+import { CREATOR_HANDLE, CREATOR_URL } from '../config/balance';
 import {
   addSoundToggle,
   addText,
@@ -169,8 +169,7 @@ export class TitleScene extends Phaser.Scene {
     // sliding nav bar: how to play (sensei), shop, endless run
     this.buildNavBar(cx, H * 0.765, s);
 
-    // memecoin plaque: CA + platform
-    this.buildCoinPlaque(cx, H * 0.87, s);
+    this.buildWelcomePlaque(cx, H * 0.87, s);
 
     addSoundToggle(this, cx, H * 0.945, s, () => audio.isMuted(), () => {
       audio.toggleMute();
@@ -264,12 +263,11 @@ export class TitleScene extends Phaser.Scene {
     this.time.delayedCall(210, () => this.scene.start(scene));
   }
 
-  private buildCoinPlaque(x: number, y: number, s: number): void {
+  private buildWelcomePlaque(x: number, y: number, s: number): void {
     const plaque = this.add.container(x, y).setDepth(12);
     const w = Math.min(346 * s, this.scale.width - 24);
-    const h = 62 * s;
+    const h = 68 * s;
 
-    // soft cream card with pink border + inner blush line
     const bg = this.add.graphics();
     bg.fillStyle(0xfff7ef, 0.96);
     bg.fillRoundedRect(-w / 2, -h / 2, w, h, 20 * s);
@@ -278,7 +276,6 @@ export class TitleScene extends Phaser.Scene {
     bg.lineStyle(2 * s, 0xffd2dd, 1);
     bg.strokeRoundedRect(-w / 2 + 5 * s, -h / 2 + 5 * s, w - 10 * s, h - 10 * s, 15 * s);
 
-    // cute mascots hugging the card
     const maki = this.add.image(-w / 2 + 4 * s, -h / 2 + 4 * s, 'maki').setAngle(-14);
     maki.setDisplaySize(38 * s, 38 * s * (maki.height / maki.width));
     const heart = this.add.image(w / 2 - 5 * s, -h / 2 + 5 * s, 'heart').setAngle(14);
@@ -292,20 +289,27 @@ export class TitleScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    const short = `${COIN_CA.slice(0, 6)}...${COIN_CA.slice(-4)}`;
-    const caText = addText(this, 0, -12 * s, `CA ${short}  ·  tap to copy!`, {
+    const greeting = addText(this, 0, -14 * s, 'every catch is a little hug ~', {
       fontFamily: 'Fredoka, Nunito, sans-serif',
-      fontSize: `${Math.round(14 * s)}px`,
+      fontSize: `${Math.round(15 * s)}px`,
       color: '#4a2c20',
     }).setOrigin(0.5);
 
-    const platform = addText(this, 0, 13 * s, `built with love on ${COIN_PLATFORM} ~`, {
+    const credit = this.add.container(0, 14 * s);
+    const avatarSize = 22 * s;
+    const avatar = this.add.image(0, 0, 'creator').setDisplaySize(avatarSize, avatarSize);
+    const by = addText(this, 0, 0, `built with love by ${CREATOR_HANDLE}`, {
       fontFamily: 'Fredoka, Nunito, sans-serif',
       fontSize: `${Math.round(14 * s)}px`,
       color: '#ff5e6c',
     }).setOrigin(0.5);
+    const gap = 7 * s;
+    const total = avatarSize + gap + by.width;
+    avatar.setX(-total / 2 + avatarSize / 2);
+    by.setX(-total / 2 + avatarSize + gap + by.width / 2);
+    credit.add([avatar, by]);
 
-    plaque.add([bg, caText, platform, maki, heart]);
+    plaque.add([bg, greeting, credit, maki, heart]);
     this.tweens.add({
       targets: plaque,
       y: y - 4 * s,
@@ -319,7 +323,8 @@ export class TitleScene extends Phaser.Scene {
       .rectangle(x, y, w, h, 0xffffff, 0.001)
       .setDepth(13)
       .setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', async () => {
+    hit.on('pointerdown', () => {
+      audio.ui();
       this.tweens.add({
         targets: plaque,
         scaleX: 1.06,
@@ -328,21 +333,7 @@ export class TitleScene extends Phaser.Scene {
         yoyo: true,
         ease: 'Quad.easeOut',
       });
-      try {
-        await navigator.clipboard.writeText(COIN_CA);
-        caText.setText('copied! thank u ~').setColor('#ff5e6c');
-        audio.ui();
-        this.time.delayedCall(1400, () =>
-          caText.setText(`CA ${short}  ·  tap to copy!`).setColor('#4a2c20'),
-        );
-      } catch {
-        caText.setText(COIN_CA.slice(0, 21));
-        platform.setText(COIN_CA.slice(21));
-        this.time.delayedCall(4000, () => {
-          caText.setText(`CA ${short}  ·  tap to copy!`);
-          platform.setText(`built with love on ${COIN_PLATFORM} ~`);
-        });
-      }
+      window.open(CREATOR_URL, '_blank', 'noopener,noreferrer');
     });
   }
 

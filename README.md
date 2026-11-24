@@ -35,6 +35,6 @@ npm run preview
 - `src/game/config/` — balance tuning, sushi roster, responsive layout helpers
 - `public/assets/` — kawaii sprite art (generated, chroma-keyed via `scripts/chromakey.mjs`)
 
-## Token
+## Credit
 
-CA `0x98d94d8e9711abc3975878efcb1c1b2ff8e244bc` · built on sushiswap
+Built with love by [@IShortBTC](https://x.com/IShortBTC)
