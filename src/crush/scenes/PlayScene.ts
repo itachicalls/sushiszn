@@ -3,7 +3,7 @@ import { addText, coverBackground, metrics } from '../../game/config/layout';
 import { coinsFor, getLevel, goalIcon, goalText, starsFor, type LevelConfig } from '../config/levels';
 import { save } from '../config/save';
 import { audio } from '../systems/AudioSystem';
-import { Board, COLS, ROWS, type Frame, type Pos, type Special, type Tile } from '../systems/board';
+import { Board, COLS, ROWS, type Frame, type Pos, type Tile } from '../systems/board';
 
 const INK = '#4a2c20';
 
@@ -492,16 +492,8 @@ export class PlayScene extends Phaser.Scene {
     icon.setDisplaySize(iconSize, iconSize * (icon.height / Math.max(1, icon.width)));
     const spark = this.add.image(size * 0.28, -size * 0.28, 'fx_sparkle').setScale(Math.max(0.28, this.cell / 180));
     root.add([plate, gloss, icon, spark]);
-    this.decorate(root, tile.special);
+    this.animatePiece(icon, tile);
     const wobble = 1000 + (tile.id % 6) * 90;
-    this.tweens.add({
-      targets: icon,
-      y: icon.y - this.cell * 0.04,
-      duration: wobble,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
     this.tweens.add({
       targets: gloss,
       alpha: 0.22,
@@ -540,24 +532,64 @@ export class PlayScene extends Phaser.Scene {
     return root;
   }
 
-  private decorate(root: Phaser.GameObjects.Container, special: Special): void {
-    if (special === 'none') return;
-    const g = this.add.graphics();
-    const radius = this.cell * 0.3;
-    if (special === 'row') {
-      g.fillStyle(0xffffff, 0.9);
-      g.fillRoundedRect(-radius, -3, radius * 2, 6, 3);
-    } else if (special === 'col') {
-      g.fillStyle(0xffffff, 0.9);
-      g.fillRoundedRect(-3, -radius, 6, radius * 2, 3);
-    } else if (special === 'bomb') {
-      g.lineStyle(Math.max(3, this.cell * 0.06), 0xff5e6c, 1);
-      g.strokeCircle(0, 0, radius * 0.85);
-    } else {
-      g.lineStyle(Math.max(3, this.cell * 0.06), 0xffb02e, 1);
-      g.strokeCircle(0, 0, radius);
+  /** Bonus pieces stay the same character. They just move in a cuter way. */
+  private animatePiece(icon: Phaser.GameObjects.Image, tile: Tile): void {
+    const hop = 900 + (tile.id % 5) * 80;
+    if (tile.special === 'row') {
+      this.tweens.add({
+        targets: icon,
+        x: this.cell * 0.07,
+        angle: 7,
+        duration: 640,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return;
     }
-    root.add(g);
+    if (tile.special === 'col') {
+      this.tweens.add({
+        targets: icon,
+        y: icon.y - this.cell * 0.09,
+        duration: 480,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return;
+    }
+    if (tile.special === 'bomb') {
+      this.tweens.add({
+        targets: icon,
+        scaleX: icon.scaleX * 1.1,
+        scaleY: icon.scaleY * 0.92,
+        duration: 420,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return;
+    }
+    if (tile.special === 'color') {
+      this.tweens.add({
+        targets: icon,
+        angle: 8,
+        y: icon.y - this.cell * 0.045,
+        duration: 700,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return;
+    }
+    this.tweens.add({
+      targets: icon,
+      y: icon.y - this.cell * 0.035,
+      duration: hop,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private refreshFuses(): void {
