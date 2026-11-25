@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { bobaGameUrl, CREATOR_HANDLE, CREATOR_URL } from '../config/balance';
+import { CREATOR_HANDLE, CREATOR_URL } from '../config/balance';
+import { openGame } from '../../switchGame';
 import {
   addSoundToggle,
   addText,
@@ -275,10 +276,7 @@ export class TitleScene extends Phaser.Scene {
   private openBoba(): void {
     audio.unlock();
     audio.ui();
-    this.cameras.main.fadeOut(200, 255, 233, 214);
-    this.time.delayedCall(210, () => {
-      window.location.assign(bobaGameUrl());
-    });
+    window.setTimeout(() => openGame('boba'), 0);
   }
 
   private buildWelcomePlaque(x: number, y: number, s: number): void {

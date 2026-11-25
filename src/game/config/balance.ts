@@ -19,10 +19,3 @@ export const BALANCE = {
 
 export const CREATOR_HANDLE = '@IShortBTC';
 export const CREATOR_URL = 'https://x.com/IShortBTC';
-
-/** Boba Hour runs beside this game. Vite serves it on 5174 while Sushi Szn uses 5173. */
-export function bobaGameUrl(): string {
-  const { protocol, hostname } = window.location;
-  const host = hostname === '127.0.0.1' ? hostname : 'localhost';
-  return `${protocol}//${host}:5174/`;
-}
