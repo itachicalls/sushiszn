@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CREATOR_HANDLE, CREATOR_URL } from '../config/balance';
+import { bobaGameUrl, CREATOR_HANDLE, CREATOR_URL } from '../config/balance';
 import {
   addSoundToggle,
   addText,
@@ -180,8 +180,8 @@ export class TitleScene extends Phaser.Scene {
   private buildNavBar(x: number, y: number, s: number): void {
     const { W } = metrics(this);
     const nav = this.add.container(x, y + 90 * s).setDepth(12).setAlpha(0);
-    const w = Math.min(352 * s, W - 20 * s);
-    const h = 66 * s;
+    const w = Math.min(368 * s, W - 14 * s);
+    const h = 64 * s;
 
     const bg = this.add.graphics();
     bg.fillStyle(0xfff7ef, 0.94);
@@ -190,7 +190,7 @@ export class TitleScene extends Phaser.Scene {
     bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 24 * s);
     nav.add(bg);
 
-    const items: Array<{ icon: string; label: string; onTap: () => void; tint?: number }> = [
+    const items: Array<{ icon: string; label: string; onTap: () => void }> = [
       {
         icon: 'sensei',
         label: 'how to',
@@ -206,20 +206,29 @@ export class TitleScene extends Phaser.Scene {
         label: 'endless',
         onTap: () => this.go('Play'),
       },
+      {
+        icon: 'boba',
+        label: 'boba',
+        onTap: () => this.openBoba(),
+      },
     ];
 
     const slot = w / items.length;
     items.forEach((item, i) => {
       const ix = -w / 2 + slot * i + slot / 2;
       const cell = this.add.container(ix, 0);
-      const icon = this.add.image(-slot / 2 + 26 * s, 0, item.icon);
-      const iconSize = 36 * s;
+      const iconSize = 30 * s;
+      const icon = this.add.image(0, 0, item.icon);
       icon.setScale(Math.min(iconSize / icon.width, iconSize / icon.height));
-      const label = addText(this, 20 * s, 0, item.label, {
+      const label = addText(this, 0, 0, item.label, {
         fontFamily: 'Fredoka, Nunito, sans-serif',
-        fontSize: `${Math.round(15 * s)}px`,
+        fontSize: `${Math.round(13 * s)}px`,
         color: INK,
       }).setOrigin(0.5);
+      const gap = 4 * s;
+      const pair = icon.displayWidth + gap + label.width;
+      icon.x = -pair / 2 + icon.displayWidth / 2;
+      label.x = pair / 2 - label.width / 2;
       const hit = this.add
         .rectangle(0, 0, slot - 6 * s, h - 8 * s, 0xffffff, 0.001)
         .setInteractive({ useHandCursor: true });
@@ -261,6 +270,15 @@ export class TitleScene extends Phaser.Scene {
     audio.ui();
     this.cameras.main.fadeOut(200, 255, 233, 214);
     this.time.delayedCall(210, () => this.scene.start(scene));
+  }
+
+  private openBoba(): void {
+    audio.unlock();
+    audio.ui();
+    this.cameras.main.fadeOut(200, 255, 233, 214);
+    this.time.delayedCall(210, () => {
+      window.location.assign(bobaGameUrl());
+    });
   }
 
   private buildWelcomePlaque(x: number, y: number, s: number): void {
