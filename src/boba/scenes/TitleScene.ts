@@ -149,8 +149,10 @@ export class TitleScene extends Phaser.Scene {
       { icon: 'coin', label: 'bar', scene: 'Shop' },
       { icon: 'golden', label: 'forever', scene: 'Play' },
       { icon: 'sushi', label: 'sushi', onTap: () => this.openSushi() },
+      { icon: 'mango', label: 'crush', onTap: () => this.openCrush() },
     ];
-    const gap = 86 * s;
+    const { W } = metrics(this);
+    const gap = Math.min(78 * s, (W - 24 * s) / items.length);
     items.forEach((item, i) => {
       const bx = x + (i - (items.length - 1) / 2) * gap;
       const bubble = this.add.container(bx, y + 40 * s).setDepth(12).setAlpha(0);
@@ -194,6 +196,12 @@ export class TitleScene extends Phaser.Scene {
     audio.unlock();
     audio.ui();
     window.setTimeout(() => openGame('sushi'), 0);
+  }
+
+  private openCrush(): void {
+    audio.unlock();
+    audio.ui();
+    window.setTimeout(() => openGame('crush'), 0);
   }
 
   private buildCredit(x: number, y: number, s: number): void {

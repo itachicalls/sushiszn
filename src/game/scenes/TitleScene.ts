@@ -137,35 +137,11 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5);
     progress.add([starIcon, starText, coinIcon, coinText]);
 
-    // play button -> level map
-    const btn = this.add.container(cx, H * 0.665).setDepth(12).setScale(s);
-    const btnBg = this.add.image(0, 0, 'ui_btn').setTint(0xff7a45);
-    const btnLabel = addText(this, 0, -1, 'PLAY', {
-      fontFamily: 'Fredoka, Nunito, sans-serif',
-      fontSize: '34px',
-      color: '#fff7ef',
-      stroke: INK,
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-    btn.add([btnBg, btnLabel]);
-    btnBg
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => btn.setScale(s * 1.06))
-      .on('pointerout', () => btn.setScale(s))
-      .on('pointerdown', () => {
-        audio.unlock();
-        audio.ui();
-        this.cameras.main.fadeOut(220, 255, 233, 214);
-        this.time.delayedCall(230, () => this.scene.start('LevelSelect'));
-      });
-    this.tweens.add({
-      targets: btn,
-      scale: { from: s, to: s * 1.045 },
-      duration: 750,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
+    this.modeButton(cx - 86 * s, H * 0.655, s * 0.64, 'PLAY', 0xff7a45, () => {
+      this.cameras.main.fadeOut(220, 255, 233, 214);
+      this.time.delayedCall(230, () => this.scene.start('LevelSelect'));
     });
+    this.modeButton(cx + 86 * s, H * 0.655, s * 0.64, 'CRUSH', 0xff5e6c, () => this.openCrush());
 
     // sliding nav bar: how to play (sensei), shop, endless run
     this.buildNavBar(cx, H * 0.765, s);
@@ -277,6 +253,48 @@ export class TitleScene extends Phaser.Scene {
     audio.unlock();
     audio.ui();
     window.setTimeout(() => openGame('boba'), 0);
+  }
+
+  private openCrush(): void {
+    audio.unlock();
+    audio.ui();
+    window.setTimeout(() => openGame('crush'), 0);
+  }
+
+  private modeButton(
+    x: number,
+    y: number,
+    scale: number,
+    label: string,
+    tint: number,
+    onClick: () => void,
+  ): void {
+    const btn = this.add.container(x, y).setDepth(12).setScale(scale);
+    const bg = this.add.image(0, 0, 'ui_btn').setTint(tint);
+    const text = addText(this, 0, -1, label, {
+      fontFamily: 'Fredoka, Nunito, sans-serif',
+      fontSize: '26px',
+      color: '#fff7ef',
+      stroke: INK,
+      strokeThickness: 5,
+    }).setOrigin(0.5);
+    btn.add([bg, text]);
+    bg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => btn.setScale(scale * 1.06))
+      .on('pointerout', () => btn.setScale(scale))
+      .on('pointerdown', () => {
+        audio.unlock();
+        audio.ui();
+        onClick();
+      });
+    this.tweens.add({
+      targets: btn,
+      scale: { from: scale, to: scale * 1.045 },
+      duration: 750,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private buildWelcomePlaque(x: number, y: number, s: number): void {

@@ -7,6 +7,13 @@ import { PlayScene as BobaPlayScene } from './boba/scenes/PlayScene';
 import { ResultScene as BobaResultScene } from './boba/scenes/ResultScene';
 import { ShopScene as BobaShopScene } from './boba/scenes/ShopScene';
 import { TitleScene as BobaTitleScene } from './boba/scenes/TitleScene';
+import { BootScene as CrushBootScene } from './crush/scenes/BootScene';
+import { HowToScene as CrushHowToScene } from './crush/scenes/HowToScene';
+import { LevelSelectScene as CrushLevelSelectScene } from './crush/scenes/LevelSelectScene';
+import { PauseScene as CrushPauseScene } from './crush/scenes/PauseScene';
+import { PlayScene as CrushPlayScene } from './crush/scenes/PlayScene';
+import { ResultScene as CrushResultScene } from './crush/scenes/ResultScene';
+import { TitleScene as CrushTitleScene } from './crush/scenes/TitleScene';
 import { BootScene } from './game/scenes/BootScene';
 import { HowToScene } from './game/scenes/HowToScene';
 import { LevelSelectScene } from './game/scenes/LevelSelectScene';
@@ -48,6 +55,28 @@ const BOBA_SCENES = [
   BobaResultScene,
 ];
 
+const CRUSH_SCENES = [
+  CrushBootScene,
+  CrushTitleScene,
+  CrushLevelSelectScene,
+  CrushHowToScene,
+  CrushPlayScene,
+  CrushPauseScene,
+  CrushResultScene,
+];
+
+const BACKGROUNDS: Record<GameId, string> = {
+  sushi: '#ffe3c4',
+  boba: '#f6dcc8',
+  crush: '#ffe4d2',
+};
+
+const TITLES: Record<GameId, string> = {
+  sushi: 'Sushi Szn',
+  boba: 'Boba Hour',
+  crush: 'Sushi Crush',
+};
+
 let game: Phaser.Game | null = null;
 
 function canvasSize(): { width: number; height: number } {
@@ -64,15 +93,15 @@ function start(id: GameId): void {
   }
   parent.replaceChildren();
 
-  const boba = id === 'boba';
-  document.body.style.background = boba ? '#f6dcc8' : '#ffe3c4';
-  document.title = boba ? 'Boba Hour' : 'Sushi Szn';
+  document.body.style.background = BACKGROUNDS[id];
+  document.title = TITLES[id];
+  if (location.hash !== `#${id}`) history.replaceState(null, '', `#${id}`);
 
   const size = canvasSize();
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: boba ? '#f6dcc8' : '#ffe3c4',
+    backgroundColor: BACKGROUNDS[id],
     scale: {
       mode: Phaser.Scale.NONE,
       width: size.width,
@@ -86,7 +115,7 @@ function start(id: GameId): void {
         debug: false,
       },
     },
-    scene: boba ? BOBA_SCENES : SUSHI_SCENES,
+    scene: id === 'boba' ? BOBA_SCENES : id === 'crush' ? CRUSH_SCENES : SUSHI_SCENES,
     input: {
       activePointers: 3,
     },
@@ -98,7 +127,14 @@ function start(id: GameId): void {
 }
 
 registerLauncher(start);
-start('sushi');
+
+function initialGame(): GameId {
+  const hash = location.hash.replace('#', '');
+  if (hash === 'boba' || hash === 'crush' || hash === 'sushi') return hash;
+  return 'sushi';
+}
+
+start(initialGame());
 
 let resizeTimer: number | undefined;
 window.addEventListener('resize', () => {
